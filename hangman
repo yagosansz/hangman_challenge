@@ -1,7 +1,116 @@
 #!/usr/bin/ruby
-# The above can be replaced with whatever language you choose
 
-# Modify this file to create your hangman program.
-#
-# The input filename will come as an argument (see completeness_test).
+# This program can be run like this:
+# ./hangman input.txt
+
 input_filename = ARGV[0]
+
+class HangmanWord
+  attr_reader :word
+
+  def initialize(word)
+    @word = word
+  end
+
+  def to_s
+    @word
+  end
+
+  def mask_chars
+    @word.gsub(/\w/, '_')
+  end
+end
+
+class Hangman
+  attr_reader :word, :masked_word, :letters, :life, :incorrect_guesses
+
+  DEFAULT_LIFE = 6
+
+  def initialize(word, letters, life = DEFAULT_LIFE)
+    @word = word
+    @masked_word = word.mask_chars
+    @letters = letters
+    @life = life
+    @incorrect_guesses = []
+  end
+
+  def play
+    puts round_message
+
+    @letters.each do |letter|
+      indexes = find_letter_index(letter)
+
+      if indexes.empty?
+        @incorrect_guesses << letter
+        @life -= 1
+      else
+        indexes.each do |index|
+          @masked_word[index] = letter
+        end
+      end
+
+      evaluate_round
+    end
+  end
+
+  def reset(life = DEFAULT_LIFE)
+    @masked_word = word.mask_chars
+    @life = life
+    @incorrect_guesses = []
+  end
+
+  private
+
+  def find_letter_index(target_letter)
+    indexes = []
+  
+    @word.to_s.chars.each_with_index do |char, index|
+      indexes << index if target_letter == char
+    end
+  
+    indexes
+  end
+
+  def round_message
+    "#{@masked_word} life left: #{@life}"
+  end
+
+  def evaluate_round
+    if @life == 0
+      puts "#{@masked_word} YOU LOSE!"
+    elsif @masked_word == @word.to_s
+      puts "#{@masked_word} YOU WIN!"
+    else
+      if @incorrect_guesses.empty?
+        puts round_message
+      else
+        puts "#{round_message} incorrect guesses: #{@incorrect_guesses.join("")}"
+      end
+    end
+  end
+end
+
+def read_file(filename)
+  formatted_input = {}
+  
+  File.foreach(filename) do |line|
+    word = line.chomp
+    next if word == ""
+
+    if word.length > 1
+      formatted_input[word.to_sym] = []
+    else
+      formatted_input[formatted_input.keys.last] << word
+    end
+  end
+
+  formatted_input
+end
+
+input_hangman = read_file(input_filename)
+
+input_hangman.each do |word, letters|
+  hangman_word = HangmanWord.new(word.to_s)
+  hangman = Hangman.new(hangman_word, letters)
+  hangman.play
+end
